@@ -17,7 +17,8 @@ import json
 import pymongo
 from config import *   # 导入mongodb配置文件
 from hashlib import md5
-import os
+import os, time
+from selenium import webdriver
 
 # 声明一个MongoDB客户端对象，传入MongoDB的URL地址
 client = pymongo.MongoClient(MONGO_URL, connect=False)
@@ -30,25 +31,29 @@ db = client[MONGO_DB]
 def get_page_index(offset, keyword):
     # 实验证明不加请求头信息，会被拒绝请求。
     headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/68.0.3029.110 Safari/537.36 SE 2.X MetaSr 1.0",
-        "referer": "https://www.toutiao.com/search/",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/71.0.3578.98 Safari/537.36",
         'x-requested-with': 'XMLHttpRequest'
     }
     # 在ajax请求中的表单提交信息
+    # timestamp = int(round(time.time()*1000))
     data = {
-        'aid': 24,
+        # 'aid': 24,
+        # 'app_name': 'web_search',
         'offset': offset,
-        'format': 'json',
+        # 'format': 'json',
         'keyword': keyword,
-        'autoload': 'true',
-        'count': 20,
-        'cur_tab': 1,
-        'from': 'gallery',
-        'pd': 'synthesis',
+        # 'autoload': 'true',
+        # 'count': 20,
+        # 'en_qc': 1,
+        # 'cur_tab': 1,
+        # 'from': 'search_tab',
+        # 'pd': 'synthesis',
+        # 'timestamp': timestamp
     }
     # 将data数据编码后得到确切的索引页URL
     url = 'https://www.toutiao.com/api/search/content/?' + urlencode(data)
     # 请求索引页并返回索引页html，若请求失败，则打印自定义错误信息
+    # 'https: // www.toutiao.com / api / search / content /?aid = 24 & app_name = web_search & offset = 0 & format = json & keyword = % E8 % A1 % 97 % E6 % 8B % 8D & autoload = true & count = 20 & en_qc = 1 & cur_tab = 1 &from=search_tab & pd = synthesi & timestamp = 1557321206115'
     try:
         response = requests.get(url, headers=headers)
         if response.status_code == 200:
@@ -62,6 +67,7 @@ def get_page_index(offset, keyword):
 def parse_page_index(html):
     # 由于索引页是ajax加载的，所以返回的信息为json格式数据，因此将该数据转化为json变量
     data = json.loads(html)
+    print(data)
     # 如果data存在，且'data'存在于data的键中，则遍历data中键为'data'的值，并从中得到键为'article_url'的值
     if data and 'data' in data.keys():
         for item in data.get('data'):
@@ -70,8 +76,7 @@ def parse_page_index(html):
 # 请求详情页信息, 将从索引页得到的详情页的url传入如下函数, 同样需要传入请求头headers, 并返回详情页信息
 def get_page_detail(url):
     headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/68.0.3029.110 Safari/537.36 SE 2.X MetaSr 1.0",
-        "referer": "https://www.toutiao.com/search/",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/71.0.3578.98 Safari/537.36",
         'x-requested-with': 'XMLHttpRequest'
     }
     try:
@@ -133,8 +138,11 @@ def save_images(images_content):
 # 将请求索引页的函数的参数传入主函数main中, 以备后面的多协程并发提高爬取速度
 def main(offset, keyword):
         html = get_page_index(offset, keyword)
+        # print(html)
+        # print(parse_page_index(html))
         for url in parse_page_index(html):
             if url:
+                # print(url)
                 detail_html = get_page_detail(url)
                 if detail_html:
                     images = parse_page_detail(detail_html, url)
