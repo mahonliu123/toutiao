@@ -150,10 +150,6 @@ def main(offset, keyword):
                         for image in images.get('images'):
                             download_images(image)
                         save_to_mongo(images)
-                else:
-                    pass
-            else:
-                pass
 
 if __name__ == '__main__':
     # 爬取10页索引页内容,将所有offset值放入列表中
